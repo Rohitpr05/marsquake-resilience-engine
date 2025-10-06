@@ -1,3 +1,16 @@
-marsquake-resilience-engine 
+# Marsquake Simulator & Habitat Resilience Lab
 
-The Marsquake Simulator & Habitat Resilience Lab is a computational project that simulates seismic activity on Mars to study its effects on habitats, rovers, and exploration infrastructure. It uses real and synthetic Marsquake data to model how quakes move through Martian terrain and how structures respond to them. The project’s goal is to evaluate structural stability, predict high-risk zones using AI, and suggest safer habitat placements or design improvements. It involves terrain generation using Perlin noise, physics-based wave simulations, and visualization through 2D or 3D tools. By integrating data science, physics modeling, and AI, this project helps in understanding and improving the resilience of future Mars missions, supporting safer infrastructure planning for organizations like NASA or ISRO.
+A computational framework for simulating seismic activity on Mars and evaluating its impact on future habitats and rovers.
+
+## Features
+
+- **Marsquake Generation**: Synthetic seismic event generation based on InSight mission data
+- **Terrain Simulation**: Realistic Martian surface generation using Perlin noise
+- **Wave Propagation**: Physical modeling of seismic wave travel through terrain
+- **Structure Testing**: Habitat and rover response analysis
+- **Terminal Visualization**: ASCII-based real-time simulation display
+
+## Installation
+```bash
+# Install dependencies
+pip install -r requirements.txt
