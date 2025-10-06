@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 """
 Martian Terrain Generator using Perlin Noise
 Creates realistic height maps and terrain properties
 """
 import numpy as np
-from noise import pnoise2
+from perlin_noise import PerlinNoise
 import config
 
 class TerrainGenerator:
@@ -24,28 +25,25 @@ class TerrainGenerator:
     
     def generate_height_map(self):
         """Generate terrain height map using Perlin noise"""
-        print(f"Generating {self.size}x{self.size} terrain grid...")
+        print("Generating {0}x{0} terrain grid...".format(self.size))
         
         terrain = np.zeros((self.size, self.size))
         
+        # Create Perlin noise generator
+        noise = PerlinNoise(octaves=config.TERRAIN_OCTAVES, seed=self.seed)
+        
         for i in range(self.size):
             for j in range(self.size):
-                # Multi-octave Perlin noise for realistic terrain
-                terrain[i][j] = pnoise2(
-                    i * config.TERRAIN_NOISE_SCALE,
-                    j * config.TERRAIN_NOISE_SCALE,
-                    octaves=config.TERRAIN_OCTAVES,
-                    persistence=0.5,
-                    lacunarity=2.0,
-                    base=self.seed
-                )
+                # Generate noise value
+                terrain[i][j] = noise([i * config.TERRAIN_NOISE_SCALE, 
+                                      j * config.TERRAIN_NOISE_SCALE])
         
         # Normalize to 0-1 range, then scale to realistic heights
         terrain = (terrain - terrain.min()) / (terrain.max() - terrain.min())
         terrain = terrain * 1000  # Scale to 0-1000 meters elevation
         
         self.terrain = terrain
-        print("✓ Terrain height map generated")
+        print("Terrain height map generated")
         return terrain
     
     def calculate_soil_properties(self):
@@ -66,7 +64,7 @@ class TerrainGenerator:
             'elevation': self.terrain
         }
         
-        print("✓ Soil properties calculated")
+        print("Soil properties calculated")
         return self.properties
     
     def get_terrain_at(self, x, y):
@@ -90,25 +88,37 @@ class TerrainGenerator:
             print("No terrain generated yet.")
             return
         
-        stats = f"""
+        stats = """
         ==========================================
         TERRAIN GENERATION SUMMARY
         ==========================================
-        Grid Size: {self.size} x {self.size}
-        Resolution: {self.resolution} m/cell
-        Total Area: {(self.size * self.resolution / 1000):.2f} km²
+        Grid Size: {0} x {0}
+        Resolution: {1} m/cell
+        Total Area: {2:.2f} km²
         
         Elevation Stats:
-        - Min: {self.terrain.min():.2f} m
-        - Max: {self.terrain.max():.2f} m
-        - Mean: {self.terrain.mean():.2f} m
-        - Std Dev: {self.terrain.std():.2f} m
+        - Min: {3:.2f} m
+        - Max: {4:.2f} m
+        - Mean: {5:.2f} m
+        - Std Dev: {6:.2f} m
         
         Soil Properties:
-        - Rigidity Range: {self.properties['rigidity'].min():.2e} - {self.properties['rigidity'].max():.2e} Pa
-        - Density Range: {self.properties['density'].min():.1f} - {self.properties['density'].max():.1f} kg/m³
+        - Rigidity Range: {7:.2e} - {8:.2e} Pa
+        - Density Range: {9:.1f} - {10:.1f} kg/m³
         ==========================================
-        """
+        """.format(
+            self.size,
+            self.resolution,
+            (self.size * self.resolution / 1000)**2,
+            self.terrain.min(),
+            self.terrain.max(),
+            self.terrain.mean(),
+            self.terrain.std(),
+            self.properties['rigidity'].min(),
+            self.properties['rigidity'].max(),
+            self.properties['density'].min(),
+            self.properties['density'].max()
+        )
         print(stats)
     
     def save_terrain(self, filename='data/synthetic/terrain.npy'):
@@ -126,7 +136,7 @@ class TerrainGenerator:
                 'seed': self.seed
             }
         })
-        print(f"✓ Terrain saved to {filename}")
+        print("Terrain saved to {0}".format(filename))
 
 
 if __name__ == "__main__":
@@ -141,8 +151,8 @@ if __name__ == "__main__":
     # Test specific location
     print("\nSample location (50, 50):")
     props = terrain_gen.get_terrain_at(50, 50)
-    print(f"Elevation: {props['elevation']:.2f} m")
-    print(f"Rigidity: {props['rigidity']:.2e} Pa")
-    print(f"Density: {props['density']:.1f} kg/m³")
+    print("Elevation: {0:.2f} m".format(props['elevation']))
+    print("Rigidity: {0:.2e} Pa".format(props['rigidity']))
+    print("Density: {0:.1f} kg/m³".format(props['density']))
     
     terrain_gen.save_terrain()

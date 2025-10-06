@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Terminal-based ASCII visualization
 Shows wave propagation and structure status in terminal
@@ -74,22 +75,22 @@ class TerminalVisualizer:
             if hasattr(struct, 'damage_level'):
                 safety = f"{(1-struct.damage_level)*100:.1f}%"
                 if struct.damage_level < 0.1:
-                    status = "✓ SAFE"
+                    status = "[OK] SAFE"
                 elif struct.damage_level < 0.3:
-                    status = "⚠ MONITOR"
+                    status = "[!] MONITOR"
                 elif struct.damage_level < 0.7:
-                    status = "⚠ WARNING"
+                    status = "[!] WARNING"
                 else:
-                    status = "✗ CRITICAL"
+                    status = "[X] CRITICAL"
                 details = f"Damage: {struct.damage_level*100:.1f}%"
             elif hasattr(struct, 'tipping_risk'):
                 safety = f"{(1-struct.tipping_risk)*100:.1f}%"
                 if struct.tipping_risk < 0.3:
-                    status = "✓ STABLE"
+                    status = "[OK] STABLE"
                 elif struct.tipping_risk < 0.6:
-                    status = "⚠ CAUTION"
+                    status = "[!] CAUTION"
                 else:
-                    status = "✗ UNSTABLE"
+                    status = "[X] UNSTABLE"
                 details = f"Tipping: {struct.tipping_risk*100:.1f}%"
             else:
                 status = "UNKNOWN"
@@ -105,7 +106,7 @@ class TerminalVisualizer:
         bar_length = 50
         progress = current / total
         filled = int(bar_length * progress)
-        bar = "█" * filled + "░" * (bar_length - filled)
+        bar = "#" * filled + "-" * (bar_length - filled)
         
         print(f"\r{label}: |{bar}| {progress*100:.1f}% ({current}/{total})", end="", flush=True)
         
