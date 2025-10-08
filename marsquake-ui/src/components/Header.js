@@ -1,33 +1,42 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+
 export default function Header({ simulationActive, onToggleSimulation }) {
+  const [timestamp, setTimestamp] = useState('')
+
+  useEffect(() => {
+    const updateTime = () => {
+      const now = new Date()
+      const sol = Math.floor((now.getTime() / 1000 / 86400) % 1000)
+      setTimestamp(`SOL ${sol} ${now.toISOString().slice(11, 19)} UTC`)
+    }
+    
+    updateTime()
+    const interval = setInterval(updateTime, 1000)
+    return () => clearInterval(interval)
+  }, [])
+
   return (
     <header className="header">
       <div className="header-title">
-        <h1>MARSQUAKE SIMULATOR</h1>
-        <span className="mission-badge">MISSION CONTROL</span>
+        <h1>MARSQUAKE MONITORING SYSTEM v2.1</h1>
+        <span className="timestamp">{timestamp || 'INITIALIZING...'}</span>
       </div>
       
-      <div className="status-indicators">
-        <div className="status-item">
-          <div className={`status-dot ${simulationActive ? 'green' : 'yellow'}`}></div>
-          <span>SYSTEM: {simulationActive ? 'ACTIVE' : 'STANDBY'}</span>
-        </div>
-        <div className="status-item">
-          <div className="status-dot green"></div>
-          <span>COMMS: ONLINE</span>
-        </div>
-        <div className="status-item">
-          <div className="status-dot green"></div>
-          <span>DATA: NOMINAL</span>
-        </div>
+      <div className="status-bar">
+        <span className={`status-item ${simulationActive ? 'active' : ''}`}>
+          SIM: {simulationActive ? 'ACTIVE' : 'STANDBY'}
+        </span>
+        <span className="status-item active">TELEMETRY: NOMINAL</span>
+        <span className="status-item active">UPLINK: 128 kbps</span>
       </div>
       
       <button 
-        className={`btn ${simulationActive ? 'btn-secondary' : ''}`}
+        className={`control-btn ${simulationActive ? 'active' : ''}`}
         onClick={onToggleSimulation}
       >
-        {simulationActive ? 'STOP SIMULATION' : 'START SIMULATION'}
+        {simulationActive ? '■ STOP' : '▶ START'}
       </button>
     </header>
   )
