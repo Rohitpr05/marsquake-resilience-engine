@@ -14,3 +14,5 @@ A computational framework for simulating seismic activity on Mars and evaluating
 ```bash
 # Install dependencies
 pip install -r requirements.txt
+
+NOTE: project under dev
