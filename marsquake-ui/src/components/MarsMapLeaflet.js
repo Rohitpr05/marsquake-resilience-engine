@@ -404,6 +404,3 @@ export default function MarsMapLeaflet({ simulationActive, currentTime }) {
     </>
   )
 }
-
-
-sdgsfgs
