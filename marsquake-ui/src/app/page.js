@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSimulation, useWebSocket } from '@/hooks/useAPI'
 import Header from '@/components/Header'
 import FloatingWindow from '@/components/FloatingWindow'
 import MarsMap from '@/components/MarsMap'
@@ -8,15 +9,27 @@ import SpectrogramPanel from '@/components/SpectrogramPanel'
 import TimeSeriesPanel from '@/components/TimeSeriesPanel'
 import HistogramPanel from '@/components/HistogramPanel'
 import ScatterPanel from '@/components/ScatterPanel'
-import SeismicTrace from '@/components/SeismicTrace'
-import DataTable from '@/components/DataTable'
-import MetricsPanel from '@/components/MetricsPanel'
-import LogPanel from '@/components/LogPanel'
-import StatusPanel from '@/components/StatusPanel'
+import SeismicTraceUpdated from '@/components/SeismicTraceUpdated'
+import DataTableUpdated from '@/components/Datatableupdated'
+import MetricsPanelUpdated from '@/components/MetricsPanelUpdated'
+import LogPanelUpdated from '@/components/LogPanelUpdated'
+import StatusPanelUpdated from '@/components/StatusPanelUpdated'
 
 export default function MissionControl() {
-  const [simulationActive, setSimulationActive] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
+  // Use simulation hook for control
+  const { 
+    simulationActive, 
+    currentTime, 
+    startSimulation, 
+    stopSimulation,
+    error: simError 
+  } = useSimulation()
+  
+  // WebSocket for real-time updates
+  const { connected } = useWebSocket((data) => {
+    // Handle real-time updates here if needed
+    console.log('Real-time update:', data)
+  })
   
   // Window visibility states
   const [windows, setWindows] = useState({
@@ -24,21 +37,12 @@ export default function MissionControl() {
     timeSeries: false,
     histogram: false,
     scatter: false,
-    seismic: false,
+    seismic: true,
     dataTable: true,
     metrics: true,
     log: true,
     status: true
   })
-
-  useEffect(() => {
-    if (simulationActive) {
-      const interval = setInterval(() => {
-        setCurrentTime(prev => prev + 0.1)
-      }, 100)
-      return () => clearInterval(interval)
-    }
-  }, [simulationActive])
 
   const toggleWindow = (windowName) => {
     setWindows(prev => ({
@@ -47,12 +51,40 @@ export default function MissionControl() {
     }))
   }
 
+  const handleToggleSimulation = async () => {
+    try {
+      if (simulationActive) {
+        await stopSimulation()
+      } else {
+        await startSimulation(0) // Start with first event
+      }
+    } catch (error) {
+      console.error('Simulation control error:', error)
+    }
+  }
+
   return (
     <div className="mission-control">
       <Header 
         simulationActive={simulationActive}
-        onToggleSimulation={() => setSimulationActive(!simulationActive)}
+        onToggleSimulation={handleToggleSimulation}
+        connected={connected}
       />
+      
+      {simError && (
+        <div style={{
+          position: 'fixed',
+          top: '40px',
+          right: '20px',
+          background: '#ff0000',
+          color: 'white',
+          padding: '10px',
+          borderRadius: '4px',
+          zIndex: 9999
+        }}>
+          ERROR: {simError}
+        </div>
+      )}
       
       <div className="main-container">
         {/* Full-screen map background */}
@@ -70,7 +102,7 @@ export default function MissionControl() {
             initialHeight={280}
             onClose={() => toggleWindow('metrics')}
           >
-            <MetricsPanel currentTime={currentTime} />
+            <MetricsPanelUpdated currentTime={currentTime} />
           </FloatingWindow>
         )}
 
@@ -83,7 +115,7 @@ export default function MissionControl() {
             initialHeight={250}
             onClose={() => toggleWindow('status')}
           >
-            <StatusPanel simulationActive={simulationActive} />
+            <StatusPanelUpdated simulationActive={simulationActive} />
           </FloatingWindow>
         )}
 
@@ -96,7 +128,7 @@ export default function MissionControl() {
             initialHeight={300}
             onClose={() => toggleWindow('dataTable')}
           >
-            <DataTable />
+            <DataTableUpdated />
           </FloatingWindow>
         )}
 
@@ -109,7 +141,7 @@ export default function MissionControl() {
             initialHeight={280}
             onClose={() => toggleWindow('seismic')}
           >
-            <SeismicTrace simulationActive={simulationActive} currentTime={currentTime} />
+            <SeismicTraceUpdated simulationActive={simulationActive} currentTime={currentTime} />
           </FloatingWindow>
         )}
 
@@ -122,7 +154,7 @@ export default function MissionControl() {
             initialHeight={300}
             onClose={() => toggleWindow('log')}
           >
-            <LogPanel simulationActive={simulationActive} />
+            <LogPanelUpdated simulationActive={simulationActive} />
           </FloatingWindow>
         )}
 
@@ -205,6 +237,20 @@ export default function MissionControl() {
             <button className="btn" style={{ width: '100%' }}>
               SCREENSHOT
             </button>
+          </div>
+          
+          <div className="sidebar-section">
+            <div className="sidebar-title">Connection Status</div>
+            <div style={{ 
+              padding: '8px',
+              background: connected ? '#00ff0020' : '#ff000020',
+              border: `1px solid ${connected ? '#00ff00' : '#ff0000'}`,
+              borderRadius: '4px',
+              fontSize: '9px',
+              textAlign: 'center'
+            }}>
+              {connected ? '✓ BACKEND CONNECTED' : '✗ BACKEND DISCONNECTED'}
+            </div>
           </div>
         </div>
       </div>

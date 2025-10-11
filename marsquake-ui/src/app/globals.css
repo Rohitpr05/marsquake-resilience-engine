@@ -213,7 +213,7 @@ body {
 .leaflet-top,
 .leaflet-bottom {
   z-index: 50 !important;
-}
+} 
 
 .sidebar-section {
   border-bottom: 2px solid var(--border-color);
