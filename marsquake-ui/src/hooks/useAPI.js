@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import marsquakeAPI from '@/services/api'
 
 // Custom hook for API data fetching
@@ -69,15 +69,26 @@ export function useAPI(endpoint, refreshInterval = null) {
   return { data, loading, error, refetch: fetchData }
 }
 
-// Hook for WebSocket real-time updates
+// FIXED Hook for WebSocket real-time updates
 export function useWebSocket(onUpdate) {
   const [connected, setConnected] = useState(false)
   const [lastMessage, setLastMessage] = useState(null)
+  
+  // Use useRef to store the callback to prevent recreation on every render
+  const onUpdateRef = useRef(onUpdate)
+  
+  // Update ref when callback changes
+  useEffect(() => {
+    onUpdateRef.current = onUpdate
+  }, [onUpdate])
 
   useEffect(() => {
+    // Stable callback functions that don't change
     const handleMessage = (data) => {
       setLastMessage(data)
-      if (onUpdate) onUpdate(data)
+      if (onUpdateRef.current) {
+        onUpdateRef.current(data)
+      }
     }
 
     const handleError = (error) => {
@@ -89,18 +100,33 @@ export function useWebSocket(onUpdate) {
       setConnected(false)
     }
 
-    marsquakeAPI.connectWebSocket(handleMessage, handleError, handleClose)
-    setConnected(true)
+    const handleOpen = () => {
+      setConnected(true)
+    }
 
+    // Connect WebSocket
+    marsquakeAPI.connectWebSocket(handleMessage, handleError, handleClose)
+    
+    // Check connection status
+    const checkConnection = () => {
+      const status = marsquakeAPI.getWebSocketStatus()
+      setConnected(status === 'connected')
+    }
+    
+    // Check initial connection
+    setTimeout(checkConnection, 1000)
+    
+    // Cleanup function
     return () => {
+      setConnected(false)
       marsquakeAPI.disconnectWebSocket()
     }
-  }, [onUpdate])
+  }, []) // Empty dependency array - only run once!
 
   return { connected, lastMessage }
 }
 
-// Hook for simulation control
+// FIXED Hook for simulation control
 export function useSimulation() {
   const [simulationActive, setSimulationActive] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -138,12 +164,12 @@ export function useSimulation() {
     }
   }, [])
 
-  // Subscribe to real-time updates
-  useWebSocket((data) => {
+  // Subscribe to real-time updates with stable callback
+  useWebSocket(useCallback((data) => {
     if (data.type === 'update') {
       setCurrentTime(data.time)
     }
-  })
+  }, []))
 
   return {
     simulationActive,

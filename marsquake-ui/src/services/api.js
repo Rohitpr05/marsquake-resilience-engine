@@ -1,4 +1,4 @@
-// API Client for Marsquake Simulator
+// FIXED API Client for Marsquake Simulator
 // Handles all communication with Python backend
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -7,6 +7,14 @@ class MarsquakeAPI {
   constructor() {
     this.baseUrl = API_BASE_URL;
     this.ws = null;
+    this.wsConnecting = false;
+    this.wsHandlers = {
+      onMessage: null,
+      onError: null,
+      onClose: null
+    };
+    this.reconnectAttempts = 0;
+    this.maxReconnectAttempts = 5;
   }
 
   // Helper method for API calls
@@ -91,21 +99,40 @@ class MarsquakeAPI {
     return this.fetchAPI('/api/seismic/realtime');
   }
 
-  // WebSocket connection for real-time updates
+  // FIXED WebSocket connection with proper management
   connectWebSocket(onMessage, onError = null, onClose = null) {
+    // Prevent multiple connections
+    if (this.ws && (this.ws.readyState === WebSocket.CONNECTING || this.ws.readyState === WebSocket.OPEN)) {
+      console.log('WebSocket already connected or connecting');
+      return;
+    }
+
+    if (this.wsConnecting) {
+      console.log('WebSocket connection already in progress');
+      return;
+    }
+
     const wsUrl = this.baseUrl.replace('http', 'ws') + '/ws';
     
     try {
+      this.wsConnecting = true;
+      this.wsHandlers = { onMessage, onError, onClose };
+      
+      console.log('Connecting to WebSocket:', wsUrl);
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log('WebSocket connected to backend');
+        console.log('WebSocket connected successfully');
+        this.wsConnecting = false;
+        this.reconnectAttempts = 0;
       };
 
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          onMessage(data);
+          if (this.wsHandlers.onMessage) {
+            this.wsHandlers.onMessage(data);
+          }
         } catch (e) {
           console.error('Error parsing WebSocket message:', e);
         }
@@ -113,31 +140,67 @@ class MarsquakeAPI {
 
       this.ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        if (onError) onError(error);
+        this.wsConnecting = false;
+        if (this.wsHandlers.onError) {
+          this.wsHandlers.onError(error);
+        }
       };
 
-      this.ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        if (onClose) onClose();
-        // Auto-reconnect after 5 seconds
-        setTimeout(() => {
-          if (this.ws?.readyState === WebSocket.CLOSED) {
-            this.connectWebSocket(onMessage, onError, onClose);
-          }
-        }, 5000);
+      this.ws.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason);
+        this.wsConnecting = false;
+        
+        if (this.wsHandlers.onClose) {
+          this.wsHandlers.onClose(event);
+        }
+
+        // Only reconnect if not manually closed and within attempt limit
+        if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          console.log(`Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+          
+          setTimeout(() => {
+            if (!this.ws || this.ws.readyState === WebSocket.CLOSED) {
+              this.connectWebSocket(onMessage, onError, onClose);
+            }
+          }, 5000 * this.reconnectAttempts); // Exponential backoff
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.error('Max reconnection attempts reached');
+        }
       };
 
     } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
+      console.error('Failed to create WebSocket:', error);
+      this.wsConnecting = false;
       if (onError) onError(error);
     }
   }
 
-  // Disconnect WebSocket
+  // FIXED WebSocket disconnect with proper cleanup
   disconnectWebSocket() {
+    console.log('Manually disconnecting WebSocket');
+    
     if (this.ws) {
-      this.ws.close();
+      // Set code 1000 for clean closure to prevent reconnection
+      this.ws.close(1000, 'Manual disconnect');
       this.ws = null;
+    }
+    
+    this.wsConnecting = false;
+    this.reconnectAttempts = this.maxReconnectAttempts; // Prevent reconnection
+    this.wsHandlers = { onMessage: null, onError: null, onClose: null };
+  }
+
+  // Check WebSocket status
+  getWebSocketStatus() {
+    if (!this.ws) return 'disconnected';
+    
+    switch (this.ws.readyState) {
+      case WebSocket.CONNECTING: return 'connecting';
+      case WebSocket.OPEN: return 'connected';
+      case WebSocket.CLOSING: return 'closing';
+      case WebSocket.CLOSED: return 'closed';
+      default: return 'unknown';
     }
   }
 }

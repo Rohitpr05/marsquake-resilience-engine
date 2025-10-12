@@ -11,7 +11,7 @@ import HistogramPanel from '@/components/HistogramPanel'
 import ScatterPanel from '@/components/ScatterPanel'
 import SeismicTraceUpdated from '@/components/SeismicTraceUpdated'
 import DataTableUpdated from '@/components/Datatableupdated'
-import MetricsPanelUpdated from '@/components/MetricsPanelUpdated'
+import MetricsPanelUpdated from '@/components/Metricspanelupdated'
 import LogPanelUpdated from '@/components/LogPanelUpdated'
 import StatusPanelUpdated from '@/components/StatusPanelUpdated'
 

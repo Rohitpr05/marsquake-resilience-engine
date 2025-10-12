@@ -3,7 +3,7 @@
 FastAPI Backend Server for Marsquake Simulator
 Connects Python simulation to Next.js frontend
 """
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -41,6 +41,9 @@ simulation_state = {
     "current_time": 0.0,
     "logs": []
 }
+
+# WebSocket connection management
+connected_clients = set()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -479,14 +482,13 @@ async def run_simulation():
         
         await asyncio.sleep(0.1)  # 100ms update rate
 
-# WebSocket endpoint for real-time updates (optional)
-from fastapi import WebSocket
-import json
-
+# WebSocket endpoint for real-time updates with improved error handling
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket for real-time updates"""
+    """WebSocket for real-time updates with better error handling"""
     await websocket.accept()
+    connected_clients.add(websocket)
+    add_log("INFO", f"WebSocket client connected. Total clients: {len(connected_clients)}")
     
     try:
         while True:
@@ -499,13 +501,34 @@ async def websocket_endpoint(websocket: WebSocket):
                     "structures": await get_structures(),
                     "logs": simulation_state["logs"][-5:]  # Last 5 logs
                 }
-                await websocket.send_json(data)
+                
+                try:
+                    await websocket.send_json(data)
+                except Exception as send_error:
+                    print(f"Error sending WebSocket message: {send_error}")
+                    break
             
+            # Small delay to prevent overwhelming the connection
             await asyncio.sleep(0.1)
+            
+    except WebSocketDisconnect:
+        print("WebSocket client disconnected normally")
+        add_log("INFO", "WebSocket client disconnected")
     except Exception as e:
         print(f"WebSocket error: {e}")
+        add_log("ERROR", f"WebSocket error: {e}")
     finally:
-        await websocket.close()
+        # Remove client from connected set
+        connected_clients.discard(websocket)
+        add_log("INFO", f"WebSocket client removed. Total clients: {len(connected_clients)}")
+        
+        # Only attempt to close if the connection is still open
+        try:
+            if hasattr(websocket, 'client_state') and websocket.client_state.value == 1:  # CONNECTED state
+                await websocket.close()
+        except Exception:
+            # Connection already closed or in error state, ignore
+            pass
 
 if __name__ == "__main__":
     import uvicorn
