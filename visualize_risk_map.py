@@ -72,3 +72,5 @@ plt.savefig('outputs/plots/risk_map.png', dpi=300, bbox_inches='tight')
 print("\nRisk map saved to: outputs/plots/risk_map.png")
 print("Opening plot window...")
 plt.show()
+
+# had to bruh!
